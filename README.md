@@ -26,7 +26,7 @@ git show <commit>          # see exactly what changed in a step
 | Step | Topic | Status |
 |---|---|---|
 | 0 | Project setup: Vite, npm, files | ✅ |
-| 1 | Scene, camera, renderer, the render loop — a spinning rock | |
+| 1 | Scene, camera, renderer, the render loop — a spinning rock | ✅ |
 | 2 | Lights & materials — the rock gets real shading | |
 | 3 | The ground & camera controls (OrbitControls) | |
 | 4 | Building the creek: water plane, banks | |
