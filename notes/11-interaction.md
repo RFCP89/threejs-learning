@@ -56,6 +56,25 @@ controls.target.lerp(focusTarget, 0.06)   // move 6% of the REMAINING distance p
 Big steps when far, tiny when near → a natural ease-out. Stop when close so we don't fight
 the user's own orbiting.
 
+### Upgrade: a face-to-face close-up with a tween
+
+Clicking now **flies** the camera to 1.3 m in front of the person's face:
+
+```js
+person.userData.parts.head.getWorldPosition(headWorld)   // where the face is
+person.getWorldDirection(facing)                          // which way they face (+z)
+position = headWorld + facing * 1.3  (+ 0.2 up)
+```
+
+The lerp became a **tween**: fixed duration (1.4 s), progress `t` from 0 to 1, shaped by an
+**easing** curve (`easeInOutCubic`: slow start, fast middle, slow end). Camera position AND
+`controls.target` are tweened together with `lerpVectors`, so it travels and turns at once.
+
+- Lerp-per-frame: abrupt start, length depends on frame rate. Tween: known length, smooth both ends.
+- `controls.addEventListener('start', …)` cancels the flight if the user grabs the mouse.
+- Empty click → fly back to the stored overview.
+- `controls.minDistance` lowered 2 → 0.8, or OrbitControls would push the camera back out.
+
 ## 7. Data-driven again
 
 The descriptions live in `TWELVE` (`about:`), next to names and colours — the label just reads
@@ -70,8 +89,8 @@ disciple with the same robe colour would light up too! A separate ring mesh avoi
 ## Try it
 
 1. Make the label show on **hover** instead of click (move the label code into `pointermove`).
-2. Change the lerp factor: `0.01` (slow, cinematic) vs `0.3` (snappy).
-3. Also move the camera closer on click: lerp `camera.position` towards a point in front of the person.
+2. Change `flight.duration` (`3` cinematic, `0.5` snappy) or swap the easing for linear (`return t`).
+3. Close-up from the side instead: rotate `facing` by 45° (`facing.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4)`).
 4. Test the shared-material bug on purpose: on hover, set
    `hovered.userData.parts.head.children[0].material.emissive.set(0x333333)` — watch who else glows.
 5. Make the trees clickable too — what would `intersectObject` return for an InstancedMesh?

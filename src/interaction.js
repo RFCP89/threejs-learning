@@ -24,8 +24,65 @@ export function createInteraction({ camera, canvas, controls, people }) {
 
   let hovered = null // the person under the mouse right now (or null)
   let selected = null // the person whose label is showing (or null)
-  const focusTarget = new THREE.Vector3() // where the camera should turn to
-  let focusing = false
+
+  // ----- Camera flights (close-up on click, back to the overview on empty click) -----
+  // A "tween" (from in-between): animate from a START to an END over a fixed DURATION.
+  // Each frame: progress t = elapsed / duration (0 → 1), shaped by an EASING curve,
+  // then position = start + (end − start) · eased(t).
+  // (Step 11 first used a lerp: "6 % of the remaining way per frame" — simple, but it
+  // starts abruptly and its duration depends on the frame rate. A tween has a known
+  // length and a gentle start AND finish.)
+  const flight = {
+    active: false,
+    startTime: 0,
+    duration: 1.4, // seconds
+    fromPosition: new THREE.Vector3(),
+    fromTarget: new THREE.Vector3(),
+    toPosition: new THREE.Vector3(),
+    toTarget: new THREE.Vector3(),
+  }
+
+  // Remember the starting view, so an empty click can fly back to it.
+  const overview = { position: camera.position.clone(), target: controls.target.clone() }
+  let inCloseUp = false
+
+  // Ease-in-out cubic: slow start, fast middle, slow end — like a camera operator
+  // pushing a dolly. Plot it: an S-shaped curve from (0,0) to (1,1).
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  }
+
+  function flyTo(position, target) {
+    flight.fromPosition.copy(camera.position)
+    flight.fromTarget.copy(controls.target)
+    flight.toPosition.copy(position)
+    flight.toTarget.copy(target)
+    flight.startTime = performance.now() / 1000 // performance.now(): ms since page load
+    flight.active = true
+  }
+
+  // If the user grabs the controls mid-flight (drag, scroll), they win: stop flying.
+  // OrbitControls fires a 'start' event whenever an interaction begins.
+  controls.addEventListener('start', () => {
+    flight.active = false
+  })
+
+  // Close-up: where should the camera go to look a person in the face?
+  const headWorld = new THREE.Vector3()
+  const facing = new THREE.Vector3()
+  function closeUpOn(person) {
+    // The head's position in the WORLD (it's nested inside body → person, Step 6).
+    person.userData.parts.head.getWorldPosition(headWorld)
+    // getWorldDirection: which way the object's +z (its FRONT, Step 6) points, in the
+    // world. Everyone faces the fire (Step 7's lookAt), so this points at the fire.
+    person.getWorldDirection(facing)
+    // 1.3 m in front of the face, a little above eye level (looking slightly down
+    // feels natural for a seated person).
+    const position = headWorld.clone().addScaledVector(facing, 1.3)
+    position.y += 0.2
+    flyTo(position, headWorld)
+    inCloseUp = true
+  }
 
   // ----- A golden ring on the ground under the hovered person -----
   // RingGeometry(innerRadius, outerRadius, segments): a flat ring, created standing up
@@ -86,11 +143,14 @@ export function createInteraction({ camera, canvas, controls, people }) {
       labelName.textContent = selected.name
       labelAbout.textContent = selected.userData.about
       label.hidden = false
-      // Turn the camera towards this person's head (see update()).
-      selected.userData.parts.head.getWorldPosition(focusTarget)
-      focusing = true
+      closeUpOn(selected) // fly in for a face-to-face close-up
     } else {
-      label.hidden = true // clicked on empty space → close the label
+      label.hidden = true // clicked on empty space → close the label…
+      if (inCloseUp) {
+        // …and fly back out to the overview.
+        flyTo(overview.position, overview.target)
+        inCloseUp = false
+      }
     }
   })
 
@@ -98,12 +158,15 @@ export function createInteraction({ camera, canvas, controls, people }) {
   const headPosition = new THREE.Vector3()
 
   function update() {
-    // Smooth camera turn with LERP (linear interpolation): each frame, move the
-    // target 6% of the REMAINING way. Big steps when far, tiny steps when close →
-    // a natural ease-out. Stop once we're close enough, so we don't fight the user.
-    if (focusing) {
-      controls.target.lerp(focusTarget, 0.06)
-      if (controls.target.distanceTo(focusTarget) < 0.01) focusing = false
+    // Camera flight: move BOTH the camera and the point it looks at, so it travels
+    // AND turns at the same time. lerpVectors(a, b, t) = a + (b − a) · t.
+    if (flight.active) {
+      const elapsed = performance.now() / 1000 - flight.startTime
+      const t = Math.min(elapsed / flight.duration, 1) // clamp: never past the end
+      const eased = easeInOutCubic(t)
+      camera.position.lerpVectors(flight.fromPosition, flight.toPosition, eased)
+      controls.target.lerpVectors(flight.fromTarget, flight.toTarget, eased)
+      if (t === 1) flight.active = false // arrived: hand control back to the user
     }
 
     if (!selected) return

@@ -104,7 +104,7 @@ controls.enableDamping = true
 controls.dampingFactor = 0.05
 
 // Limits, so the visitor can't get lost:
-controls.minDistance = 2 // can't zoom into the rock
+controls.minDistance = 0.8 // can't zoom into things (was 2; the click close-up needs ~1.3)
 controls.maxDistance = 20 // can't zoom out past the edge of the world
 // Polar angle = how far the camera tilts from straight-up (0) to straight-down (π).
 // π/2 is level with the horizon; stopping a little before it keeps us above ground.
