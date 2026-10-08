@@ -14,7 +14,9 @@ import { CREEK_HALF_WIDTH, creekCenterZ, distanceToCreek, getTerrainHeight } fro
 
 // The clearing: an open patch of grass where Jesus and the disciples will gather
 // (Steps 6–7). No trees may grow here. Exported so other modules can use the same spot.
-export const CLEARING = { x: 1, z: 3, radius: 6 }
+// (Step 7: moved from z = 3 to z = 4 so the circle of 13 doesn't sit on our hero rocks,
+// and widened 6 → 7 so the starting camera stands inside the clearing, not in a tree.)
+export const CLEARING = { x: 1, z: 4, radius: 7 }
 
 // How far out from the centre we place things (the ground is 40×40, so ±20; we stay
 // a little inside the edge).

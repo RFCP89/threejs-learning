@@ -5,6 +5,7 @@
 // Step 4 — The creek: carved terrain + water (section 4, and src/terrain.js)
 // Step 5 — Nature: instanced rocks & trees (section 5, and src/nature.js)
 // Step 6 — People: a figure built as a hierarchy (section 5b, and src/people.js)
+// Step 7 — The twelve: data, a circle, sitting poses (section 5b, src/disciples.js)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -25,7 +26,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 // names we need; terrain.js decides what it shares with the `export` keyword.
 import { createGround, createWater, getTerrainHeight } from './terrain.js'
 import { CLEARING, createRocks, createTrees } from './nature.js'
-import { createPerson } from './people.js'
+import { createGathering } from './disciples.js'
 
 // Debug visuals (helpers, console logs). Set to false to hide them all.
 // (Step 6: moved up here from the lights section, since several sections now use it.)
@@ -63,7 +64,7 @@ const camera = new THREE.PerspectiveCamera(
 // Coordinates in three.js: x = right, y = up, z = towards you (out of the screen).
 // The camera starts at (0,0,0) — the same spot as our object, so we'd see nothing.
 // Move it back (z), up (y) and a bit to the right (x) for a 3/4 view of the ground:
-camera.position.set(4, 3, 7)
+camera.position.set(4.5, 3.5, 8.5) // Step 7: pulled back to fit the circle (still inside the clearing!)
 
 // OrbitControls (Step 3) let you move the camera with the mouse / touch:
 //   left-drag  → orbit (circle around a point)
@@ -72,7 +73,7 @@ camera.position.set(4, 3, 7)
 // The camera always orbits around and looks at `controls.target`.
 // It needs the camera to move and the canvas to listen for mouse events on.
 const controls = new OrbitControls(camera, canvas)
-controls.target.set(0.6, 0.6, 1) // between the clearing (Jesus) and the creek
+controls.target.set(1, 0.5, 3.5) // the circle of 13, with the creek behind
 
 // Damping = inertia: after you let go, the camera glides to a stop instead of halting.
 // Feels much smoother, but REQUIRES controls.update() every frame (see the render loop).
@@ -162,22 +163,18 @@ wetPebble.position.set(1.9, getTerrainHeight(1.9, 0.6) + 0.15, 0.6)
 scene.add(wetPebble)
 
 // -------------------------------------------------------------
-// 5b. People (Step 6) — built in src/people.js
+// 5b. People — Jesus and the twelve (src/people.js, src/disciples.js)
 // -------------------------------------------------------------
-// Jesus, standing in the middle of the clearing: white robe, red mantle, a halo.
-const jesus = createPerson({ robe: 0xf2ead8, mantle: 0x9e2b25, halo: true })
-// The person's origin is at his feet, so placing him ON the ground is easy:
-jesus.position.set(CLEARING.x, getTerrainHeight(CLEARING.x, CLEARING.z), CLEARING.z)
-// lookAt turns an object so its FRONT (+z) faces a point. Facing the starting camera,
-// at his own eye height (so he turns but doesn't tilt up/down).
-jesus.lookAt(camera.position.x, jesus.position.y, camera.position.z)
-scene.add(jesus)
+// Step 6 built ONE standing figure here. Step 7: all 13, sitting in a circle in the
+// clearing. Jesus takes the seat across the circle from the camera, facing us.
+const gathering = createGathering(CLEARING, camera.position)
+scene.add(gathering.group)
 
-// The joints we saved in userData — used to animate him in the render loop.
-const { head, rightArm } = jesus.userData.parts
+// The joints we saved in userData — used to animate Jesus in the render loop.
+const { head, rightArm } = gathering.jesus.userData.parts
 
 if (DEBUG) {
-  // Local axes on the RIGHT SHOULDER joint. Watch them in the browser: they're
+  // Local axes on Jesus's RIGHT SHOULDER joint. Watch them in the browser: they're
   // attached to the arm group, so they rotate WITH it. Red/green/blue here are the
   // arm's own x/y/z — not the world's. That's "local coordinates".
   rightArm.add(new THREE.AxesHelper(0.3))
