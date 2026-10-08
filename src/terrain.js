@@ -11,7 +11,8 @@
 import * as THREE from 'three'
 
 // ----- Shape of the creek (all in metres) --------------------------------------
-const CREEK_HALF_WIDTH = 1.5 // from the centre line to the water's edge (roughly)
+// Step 5: exported, so nature.js can keep trees out of the creek.
+export const CREEK_HALF_WIDTH = 1.5 // from the centre line to the water's edge (roughly)
 const CREEK_DEPTH = 0.8 // how deep the bed is carved at the centre
 const BANK_WIDTH = 1.0 // how far the slope extends beyond the edge, into the grass
 
@@ -28,6 +29,13 @@ export function creekCenterZ(x) {
   return -2 + Math.sin(x * 0.25) * 1.5
 }
 
+// Step 5: how far is a point from the creek's centre line? (Measured along z only —
+// a good-enough approximation since the bends are gentle.) Used by the height function
+// below AND by nature.js to decide where trees may grow.
+export function distanceToCreek(x, z) {
+  return Math.abs(z - creekCenterZ(x))
+}
+
 // ----- The height function: the heart of the terrain ---------------------------
 // Given any (x, z) on the ground, return the ground's height y there.
 // It's exported so other code can ask "how high is the ground here?" — e.g. to
@@ -38,7 +46,7 @@ export function getTerrainHeight(x, z) {
   const rolling = 0.12 * Math.sin(x * 0.5) * Math.cos(z * 0.4) + 0.05 * Math.sin(x * 1.3 + z * 0.9)
 
   // 2. The creek channel. First: how far is this point from the creek's centre line?
-  const distance = Math.abs(z - creekCenterZ(x))
+  const distance = distanceToCreek(x, z)
 
   // smoothstep(value, min, max) returns 0 below min, 1 above max, and a smooth
   // S-curve in between. Here: 0 near the centre → 1 out on the grass.
