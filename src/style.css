@@ -14,3 +14,63 @@ body {
   width: 100vw;
   height: 100vh;
 }
+
+/* ----- Step 11: HTML overlays on top of the canvas ----- */
+
+/* The name label. position: fixed + left/top set from JavaScript every frame.
+   translate(-50%, -100%) moves its anchor point to the bottom-centre, so the
+   coordinates we compute (the head's screen position) sit just under the label. */
+.label {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 12px));
+  max-width: 240px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(30, 22, 14, 0.78);
+  color: #fbeedd;
+  font: 14px/1.35 Georgia, 'Times New Roman', serif;
+  text-align: center;
+  /* Clicks pass THROUGH the label to the canvas underneath. */
+  pointer-events: none;
+}
+/* The little pointer triangle under the box. */
+.label::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom: 0;
+  border-top-color: rgba(30, 22, 14, 0.78);
+}
+/* The HTML `hidden` attribute must win over display rules. */
+.label[hidden] {
+  display: none;
+}
+.label-name {
+  display: block;
+  font-size: 16px;
+  color: #ffd27a;
+}
+
+/* The hint at the bottom of the screen. */
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(30, 22, 14, 0.55);
+  color: #fbeedd;
+  font: 13px Georgia, serif;
+  text-align: center;
+  /* On narrow (phone) screens, wrap instead of running off the edges. */
+  width: max-content;
+  max-width: calc(100% - 32px);
+  pointer-events: none;
+}

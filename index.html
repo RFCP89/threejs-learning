@@ -16,6 +16,17 @@
     <canvas id="scene"></canvas>
 
     <!--
+      Step 11: plain HTML elements floating ON TOP of the canvas.
+      Text is much easier (and sharper) in HTML than in 3D. JavaScript moves the label
+      every frame so it follows a person's head on screen.
+    -->
+    <div id="label" class="label" hidden>
+      <strong class="label-name"></strong>
+      <span class="label-about"></span>
+    </div>
+    <p class="hint">Drag to look around · scroll to zoom · click someone to meet them</p>
+
+    <!--
       type="module" means we can use `import` in our JS.
       Vite intercepts this file and resolves imports like `import * as THREE from 'three'`.
     -->

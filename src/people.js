@@ -114,6 +114,8 @@ export function createPerson(options = {}) {
   const person = new THREE.Group()
   // Every Object3D has a `name` — handy for debugging, and for Step 11 (click → name).
   person.name = look.name
+  // Step 11: a short description, shown when you click this person.
+  person.userData.about = look.about ?? ''
 
   // ----- body: origin at hip height. Everything else hangs off this. -----
   const body = new THREE.Group()

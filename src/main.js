@@ -10,6 +10,7 @@
 //          (sections 2, 6, 7, 7b and src/atmosphere.js)
 // Step 9 — Animated water: GLSL injected into a standard material (src/water.js)
 // Step 10 — Life: idle motion, a flickering campfire, fireflies (section 5c)
+// Step 11 — Interaction: hover & click people, raycasting (section 8b, src/interaction.js)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -35,6 +36,7 @@ import { createGathering } from './disciples.js'
 import { createEnvironment, createFog, createSky, getSunDirection } from './atmosphere.js'
 import { createCampfire } from './campfire.js'
 import { createFireflies } from './fireflies.js'
+import { createInteraction } from './interaction.js'
 
 // Debug visuals (helpers, console logs). Set to false to hide them all.
 // (Step 6: moved up here from the lights section, since several sections now use it.)
@@ -343,6 +345,14 @@ window.addEventListener('resize', () => {
 })
 
 // -------------------------------------------------------------
+// 8b. Interaction (Step 11) — src/interaction.js
+// -------------------------------------------------------------
+// Hover someone → golden ring + hand cursor. Click → a name label follows their head
+// and the camera turns towards them. Created AFTER the shadow setup (7b), so the
+// ring it adds isn't given shadow flags.
+const interaction = createInteraction({ camera, canvas, controls, people: gathering.group })
+
+// -------------------------------------------------------------
 // 9. The render loop
 // -------------------------------------------------------------
 // setAnimationLoop calls our function once per screen refresh (usually 60×/s).
@@ -376,6 +386,8 @@ renderer.setAnimationLoop((time) => {
   gathering.update(seconds)
   campfire.update(seconds)
   fireflies.update(seconds)
+  // Step 11: smooth camera focus + keep the label glued to the selected head.
+  interaction.update()
 
   // Paint one picture of the scene, as seen by the camera.
   renderer.render(scene, camera)
