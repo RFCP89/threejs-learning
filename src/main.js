@@ -38,6 +38,7 @@ import { createEnvironment, createFog, createSky, getSunDirection } from './atmo
 import { createCampfire } from './campfire.js'
 import { createFireflies } from './fireflies.js'
 import { createInteraction } from './interaction.js'
+import { createClouds } from './clouds.js'
 // Step 12: post-processing addons (bloom) and a tiny FPS meter.
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -342,6 +343,11 @@ water.castShadow = false
 sky.castShadow = false
 sky.receiveShadow = false
 
+// Low-poly 3D clouds drifting over the sky (src/clouds.js). Added AFTER the traverse
+// above on purpose: clouds shouldn't cast shadows onto the scene.
+const clouds = createClouds(CLEARING)
+scene.add(clouds.mesh)
+
 // -------------------------------------------------------------
 // 7c. Post-processing (Step 12): bloom
 // -------------------------------------------------------------
@@ -445,6 +451,7 @@ renderer.setAnimationLoop((time) => {
   gathering.update(seconds)
   campfire.update(seconds)
   fireflies.update(seconds)
+  clouds.update(seconds)
   // Step 11: smooth camera focus + keep the label glued to the selected head.
   interaction.update()
 
