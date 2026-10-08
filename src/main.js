@@ -9,6 +9,7 @@
 // Step 8 — Atmosphere: sky, environment light, fog, shadows, tone mapping
 //          (sections 2, 6, 7, 7b and src/atmosphere.js)
 // Step 9 — Animated water: GLSL injected into a standard material (src/water.js)
+// Step 10 — Life: idle motion, a flickering campfire, fireflies (section 5c)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -32,6 +33,8 @@ import { createWater, updateWater } from './water.js'
 import { CLEARING, createRocks, createTrees } from './nature.js'
 import { createGathering } from './disciples.js'
 import { createEnvironment, createFog, createSky, getSunDirection } from './atmosphere.js'
+import { createCampfire } from './campfire.js'
+import { createFireflies } from './fireflies.js'
 
 // Debug visuals (helpers, console logs). Set to false to hide them all.
 // (Step 6: moved up here from the lights section, since several sections now use it.)
@@ -187,6 +190,18 @@ if (DEBUG) {
   // arm's own x/y/z — not the world's. That's "local coordinates".
   rightArm.add(new THREE.AxesHelper(0.3))
 }
+
+// -------------------------------------------------------------
+// 5c. Life (Step 10) — src/campfire.js, src/fireflies.js
+// -------------------------------------------------------------
+// A campfire in the middle of the circle, on the ground.
+const campfire = createCampfire()
+campfire.group.position.set(CLEARING.x, getTerrainHeight(CLEARING.x, CLEARING.z), CLEARING.z)
+scene.add(campfire.group)
+
+// Fireflies drifting around the clearing and over the creek.
+const fireflies = createFireflies(CLEARING)
+scene.add(fireflies.points)
 
 // -------------------------------------------------------------
 // 6. Lights — golden hour by the creek
@@ -355,6 +370,12 @@ renderer.setAnimationLoop((time) => {
 
   // Step 9: tell the water shader what time it is, so the waves travel.
   updateWater(seconds)
+
+  // Step 10: everything alive gets the time and updates itself. Each module owns
+  // its animation; the loop just hands out the clock. (A pattern that scales well.)
+  gathering.update(seconds)
+  campfire.update(seconds)
+  fireflies.update(seconds)
 
   // Paint one picture of the scene, as seen by the camera.
   renderer.render(scene, camera)

@@ -85,5 +85,45 @@ export function createGathering(center, viewFrom) {
     if (i === 0) jesus = person
   })
 
-  return { group, jesus }
+  // ----- Step 10: idle life -------------------------------------------------------
+  // Real people are never perfectly still. Each disciple gets three tiny motions:
+  //   breathing — the upper body leans a hair forward/back
+  //   sway      — a slow side-to-side drift
+  //   glances   — the head turns a little around its resting direction
+  // Every motion is an OFFSET added to the pose's own rotation, so first we remember
+  // each joint's resting values (set by poseSitting and the head turn above).
+  const disciples = group.children.filter((person) => person !== jesus)
+  disciples.forEach((person, i) => {
+    const { body, skirt, head } = person.userData.parts
+    person.userData.rest = {
+      bodyX: body.rotation.x,
+      skirtX: skirt.rotation.x,
+      headY: head.rotation.y,
+      phase: i * 2.4, // a different starting point per person → nobody moves in sync
+      speed: 0.8 + (i % 4) * 0.12, // and slightly different tempos
+    }
+  })
+
+  function update(seconds) {
+    disciples.forEach((person) => {
+      const { body, skirt, head } = person.userData.parts
+      const rest = person.userData.rest
+      const t = seconds * rest.speed + rest.phase
+
+      // Breathing: ~one breath every 4 s. The skirt gets the OPPOSITE offset so the
+      // legs stay flat on the ground — the Step 7 compensation trick again.
+      const breath = Math.sin(t * 1.5) * 0.02
+      body.rotation.x = rest.bodyX + breath
+      skirt.rotation.x = rest.skirtX - breath
+
+      // Sway (no compensation needed: a tiny sideways tilt is invisible on the legs).
+      body.rotation.z = Math.sin(t * 0.4) * 0.025
+
+      // Glance around the resting direction, and nod very slightly.
+      head.rotation.y = rest.headY + Math.sin(t * 0.3) * 0.15
+      head.rotation.x = Math.sin(t * 0.55) * 0.05
+    })
+  }
+
+  return { group, jesus, update }
 }
