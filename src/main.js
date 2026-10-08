@@ -4,6 +4,7 @@
 // Step 3 — The ground & camera controls (sections 3 and 4)
 // Step 4 — The creek: carved terrain + water (section 4, and src/terrain.js)
 // Step 5 — Nature: instanced rocks & trees (section 5, and src/nature.js)
+// Step 6 — People: a figure built as a hierarchy (section 5b, and src/people.js)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -23,7 +24,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 // Step 4: our OWN module. './' means "a file next to this one". We import only the
 // names we need; terrain.js decides what it shares with the `export` keyword.
 import { createGround, createWater, getTerrainHeight } from './terrain.js'
-import { createRocks, createTrees } from './nature.js'
+import { CLEARING, createRocks, createTrees } from './nature.js'
+import { createPerson } from './people.js'
+
+// Debug visuals (helpers, console logs). Set to false to hide them all.
+// (Step 6: moved up here from the lights section, since several sections now use it.)
+const DEBUG = true
 
 // -------------------------------------------------------------
 // 1. The canvas — the HTML element we draw on (see index.html)
@@ -66,7 +72,7 @@ camera.position.set(4, 3, 7)
 // The camera always orbits around and looks at `controls.target`.
 // It needs the camera to move and the canvas to listen for mouse events on.
 const controls = new OrbitControls(camera, canvas)
-controls.target.set(0, 0, -1) // between the rock and the creek behind it
+controls.target.set(0.6, 0.6, 1) // between the clearing (Jesus) and the creek
 
 // Damping = inertia: after you let go, the camera glides to a stop instead of halting.
 // Feels much smoother, but REQUIRES controls.update() every frame (see the render loop).
@@ -156,6 +162,28 @@ wetPebble.position.set(1.9, getTerrainHeight(1.9, 0.6) + 0.15, 0.6)
 scene.add(wetPebble)
 
 // -------------------------------------------------------------
+// 5b. People (Step 6) — built in src/people.js
+// -------------------------------------------------------------
+// Jesus, standing in the middle of the clearing: white robe, red mantle, a halo.
+const jesus = createPerson({ robe: 0xf2ead8, mantle: 0x9e2b25, halo: true })
+// The person's origin is at his feet, so placing him ON the ground is easy:
+jesus.position.set(CLEARING.x, getTerrainHeight(CLEARING.x, CLEARING.z), CLEARING.z)
+// lookAt turns an object so its FRONT (+z) faces a point. Facing the starting camera,
+// at his own eye height (so he turns but doesn't tilt up/down).
+jesus.lookAt(camera.position.x, jesus.position.y, camera.position.z)
+scene.add(jesus)
+
+// The joints we saved in userData — used to animate him in the render loop.
+const { head, rightArm } = jesus.userData.parts
+
+if (DEBUG) {
+  // Local axes on the RIGHT SHOULDER joint. Watch them in the browser: they're
+  // attached to the arm group, so they rotate WITH it. Red/green/blue here are the
+  // arm's own x/y/z — not the world's. That's "local coordinates".
+  rightArm.add(new THREE.AxesHelper(0.3))
+}
+
+// -------------------------------------------------------------
 // 6. Lights — golden hour by the creek
 // -------------------------------------------------------------
 // Real scenes are lit by a mix of DIRECT light (the sun: one direction, makes clear
@@ -179,8 +207,7 @@ const sun = new THREE.DirectionalLight(0xffb36b, 3.0)
 sun.position.set(4, 2.5, 3) // right, slightly up, in front → light from the front-right
 scene.add(sun)
 
-// Helpers are debug visuals. Set DEBUG to false to hide them all.
-const DEBUG = true
+// Helpers are debug visuals (DEBUG is defined at the top of the file).
 if (DEBUG) {
   // A small square + line showing where the sun is and which way it points.
   scene.add(new THREE.DirectionalLightHelper(sun, 0.5))
@@ -220,15 +247,24 @@ window.addEventListener('resize', () => {
 // 9. The render loop
 // -------------------------------------------------------------
 // setAnimationLoop calls our function once per screen refresh (usually 60×/s).
-// It passes `time` (milliseconds since the page started) — unused this step.
+// It passes `time` (milliseconds since the page started).
 //
 // Step 3: the rock no longer spins or bobs — it rests on the ground, and now it's
 // YOU who moves (the camera). The time-based animation from Step 1 will come back
 // for things that really move: water, people breathing, fireflies.
 let drawCallsLogged = false
-renderer.setAnimationLoop(() => {
+renderer.setAnimationLoop((time) => {
+  const seconds = time / 1000
+
   // Apply damping: nudges the camera a little further along its glide each frame.
   controls.update()
+
+  // Step 6: animate JOINTS, not meshes. Rotating the arm GROUP swings the whole arm
+  // (sleeve + hand) around the shoulder, because that group's origin IS the shoulder.
+  // Negative x-rotation lifts the arm forward: a slow, gentle blessing gesture.
+  rightArm.rotation.x = -1.0 - Math.sin(seconds * 0.8) * 0.25
+  // And the head slowly looks around (rotation around y = turning left/right).
+  head.rotation.y = Math.sin(seconds * 0.4) * 0.35
 
   // Paint one picture of the scene, as seen by the camera.
   renderer.render(scene, camera)

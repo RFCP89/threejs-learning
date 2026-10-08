@@ -42,7 +42,7 @@ git show <commit>          # see exactly what changed in a step
 | 3 | The ground & camera controls (OrbitControls) | ✅ |
 | 4 | Building the creek: water plane, banks | ✅ |
 | 5 | Nature: rocks & trees with instancing | ✅ |
-| 6 | People: building a low-poly figure from simple shapes | |
+| 6 | People: building a low-poly figure from simple shapes | ✅ |
 | 7 | Thirteen figures: groups, cloning, placing them in a circle | |
 | 8 | Atmosphere: sky, fog, golden-hour lighting, shadows | |
 | 9 | Animating water with a shader | |
