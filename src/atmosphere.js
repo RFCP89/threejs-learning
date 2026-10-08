@@ -52,6 +52,47 @@ export function createSky(sunDirection) {
   // AROUND the sun (mie scattering) is part of the sky colour and stays.
   u.showSunDisc.value = 0
 
+  // ----- Soft limit on the sky's brightness (fix: looking at the sun was blinding) --
+  // Near the sun the sky shader outputs values DOZENS of times above 1. Two things then
+  // blow the screen out to white: the bloom (everything above its threshold, 1.6,
+  // glows and spreads) and tone mapping (very bright → white).
+  //
+  // Fix: compress the sky's colour right before it's written. A "soft knee":
+  //   below KNEE  → untouched (the rest of the sky looks exactly as before)
+  //   above KNEE  → squeezed more and more, approaching LIMIT but never reaching it
+  // LIMIT (1.4) is under the bloom threshold, so the sky itself no longer glows.
+  // We scale r, g and b by the SAME factor, which keeps the HUE: the sun's
+  // surroundings stay golden instead of turning white.
+  //
+  // onBeforeCompile works on any material, ShaderMaterial included (Step 9's trick).
+  //
+  // The limit is only for what the EYE sees. The environment map (below) must capture
+  // the sky's FULL brightness — it's the light that reaches the whole scene; compressed,
+  // the scene went twice as dark. So the limit has an on/off uniform (1 = on), which
+  // createEnvironment switches off while it captures.
+  sky.userData.softLimit = { value: 1 }
+  sky.material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSoftLimit = sky.userData.softLimit
+    shader.fragmentShader = 'uniform float uSoftLimit;\n' + shader.fragmentShader
+    shader.fragmentShader = shader.fragmentShader.replace(
+      'gl_FragColor = vec4( texColor, 1.0 );',
+      /* glsl */ `
+        const float KNEE = 0.8;
+        const float LIMIT = 1.4;
+        float peak = max(texColor.r, max(texColor.g, texColor.b)); // brightest channel
+        if (uSoftLimit > 0.5 && peak > KNEE) {
+          float excess = peak - KNEE;
+          // excess / (1 + excess / room): grows normally at first, then flattens out
+          // towards 'room' — so the new peak approaches LIMIT smoothly.
+          float room = LIMIT - KNEE;
+          float newPeak = KNEE + excess / (1.0 + excess / room);
+          texColor *= newPeak / peak;
+        }
+        gl_FragColor = vec4( texColor, 1.0 );
+      `,
+    )
+  }
+
   return sky
 }
 
@@ -76,7 +117,11 @@ export function createEnvironment(renderer, sky) {
   // The sun disc must be hidden while capturing: a tiny, super-bright dot makes
   // splotchy reflections. (The tip comes straight from the Sky addon's documentation.)
   // (Since Step 12 the disc is hidden everywhere — see createSky — so nothing to toggle.)
+  // The soft brightness limit IS toggled: off while capturing (full-strength light for
+  // the scene), back on afterwards (comfortable sky for the eye).
+  sky.userData.softLimit.value = 0
   const envMap = pmrem.fromScene(envScene).texture
+  sky.userData.softLimit.value = 1
 
   pmrem.dispose() // free the generator's GPU memory; we keep only the result
   return envMap

@@ -33,6 +33,25 @@ Tuning story:
   Clamping extreme pixels is a standard trick in real renderers.
 - A firefly next to the camera became a giant blob → `gl_PointSize = min(…)`.
 
+### Follow-up fix: looking straight at the sun was blinding
+
+Measured: the screen averaged **90 % brightness** when facing the sun — almost pure white.
+Near the sun, the sky shader outputs values dozens of times above 1 → bloom + tone mapping
+turn the whole screen white.
+
+1. **Soft knee on the sky** (`atmosphere.js`, injected before the sky's `gl_FragColor`):
+   below 0.8 nothing changes; above, brightness approaches 1.4 (under the bloom threshold)
+   but never passes it. All three channels are scaled by the same factor → the **hue is
+   kept**: the sunset stays orange instead of turning white.
+2. **But not for the environment map.** The first try compressed the sky everywhere, and the
+   whole scene went twice as dark (39 % → 19 %): the env map *is* the sky's light. So the knee
+   has an on/off uniform (`uSoftLimit`) that `createEnvironment` switches **off** while capturing.
+   Lesson: what the eye sees and what lights the scene can be treated differently.
+3. **Water clamp lowered 2.5 → 1.5** — just under the bloom threshold, so glints sparkle
+   without spreading glare.
+
+Result: facing the sun 90 % → 48 % average brightness, with a visible sunset gradient.
+
 ## 3. Debug mode from the URL
 
 ```js
@@ -68,7 +87,7 @@ Clean by default; `?debug` shows axes, the FPS meter (`stats.module.js`) and the
 ## Try it
 
 1. Bloom: `strength` 1.5, `radius` 1, `threshold` 0.5 — dreamy overload. Then find your own balance.
-2. Remove the water clamp line — see the glare come back.
+2. Remove the water clamp line — see the glare come back. Or set `uSoftLimit` to 0 and look at the sun.
 3. Open `?debug`, click the FPS meter to see ms/frame. Toggle shadows off: how many ms do they cost?
 4. Add another pass: `import { FilmPass } from 'three/addons/postprocessing/FilmPass.js'` → film grain.
 5. Lower `samples: 4` to `0` and look at the edges of the figures.
