@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Makes the page scale correctly on phones -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calm Creek — three.js learning</title>
+    <!-- Vite lets us link CSS straight from the src folder -->
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!--
+      The <canvas> is the "screen" three.js draws onto.
+      WebGL (the browser's GPU drawing API) can only paint inside a canvas.
+    -->
+    <canvas id="scene"></canvas>
+
+    <!--
+      type="module" means we can use `import` in our JS.
+      Vite intercepts this file and resolves imports like `import * as THREE from 'three'`.
+    -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

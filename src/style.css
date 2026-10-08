@@ -1,0 +1,16 @@
+/* Remove the browser's default margins so the canvas can fill the whole window */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden; /* no scrollbars — the 3D scene IS the page */
+  background: #0b1a14;
+}
+
+/* The canvas is display:inline by default, which leaves a tiny gap under it.
+   display:block removes that gap. */
+#scene {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}

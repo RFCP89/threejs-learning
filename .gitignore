@@ -1,0 +1,5 @@
+# Installed packages — recreated by `npm install`, never commit them
+node_modules/
+# Production build output — recreated by `npm run build`
+dist/
+.DS_Store
