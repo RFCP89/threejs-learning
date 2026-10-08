@@ -45,7 +45,7 @@ git show <commit>          # see exactly what changed in a step
 | 6 | People: building a low-poly figure from simple shapes | ✅ |
 | 7 | Thirteen figures: groups, cloning, placing them in a circle | ✅ |
 | 8 | Atmosphere: sky, fog, golden-hour lighting, shadows | ✅ |
-| 9 | Animating water with a shader | |
+| 9 | Animating water with a shader | ✅ |
 | 10 | Life: idle animations, fireflies (particles), a campfire | |
 | 11 | Interaction: click a figure to see their name (raycasting) | |
 | 12 | Polish: post-processing (bloom), performance, deploy | |

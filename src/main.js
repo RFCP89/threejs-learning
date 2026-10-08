@@ -8,6 +8,7 @@
 // Step 7 — The twelve: data, a circle, sitting poses (section 5b, src/disciples.js)
 // Step 8 — Atmosphere: sky, environment light, fog, shadows, tone mapping
 //          (sections 2, 6, 7, 7b and src/atmosphere.js)
+// Step 9 — Animated water: GLSL injected into a standard material (src/water.js)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -26,7 +27,8 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 // Step 4: our OWN module. './' means "a file next to this one". We import only the
 // names we need; terrain.js decides what it shares with the `export` keyword.
-import { createGround, createWater, getTerrainHeight } from './terrain.js'
+import { createGround, getTerrainHeight } from './terrain.js'
+import { createWater, updateWater } from './water.js'
 import { CLEARING, createRocks, createTrees } from './nature.js'
 import { createGathering } from './disciples.js'
 import { createEnvironment, createFog, createSky, getSunDirection } from './atmosphere.js'
@@ -101,6 +103,7 @@ const ground = createGround()
 scene.add(ground)
 
 // A flat sheet of water at WATER_LEVEL: it only shows where the creek dips below it.
+// Step 9: now with moving ripples, built in src/water.js.
 const water = createWater()
 scene.add(water)
 
@@ -349,6 +352,9 @@ renderer.setAnimationLoop((time) => {
 
   // Step 8: the Sky shader moves its clouds based on a `time` uniform (in seconds).
   sky.material.uniforms.time.value = seconds
+
+  // Step 9: tell the water shader what time it is, so the waves travel.
+  updateWater(seconds)
 
   // Paint one picture of the scene, as seen by the camera.
   renderer.render(scene, camera)

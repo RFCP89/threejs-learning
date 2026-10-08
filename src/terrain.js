@@ -120,23 +120,4 @@ export function createGround() {
   return new THREE.Mesh(geometry, material)
 }
 
-// ----- Build the water ----------------------------------------------------------
-export function createWater() {
-  // One flat plane the size of the world, at WATER_LEVEL. Only the parts above the
-  // carved creek bed are visible; the ground hides the rest.
-  const geometry = new THREE.PlaneGeometry(40, 40)
-  geometry.rotateX(-Math.PI / 2)
-
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x3f7f8c, // teal creek water
-    roughness: 0.1, // smooth surface → shiny sun highlights (Step 2!)
-    metalness: 0,
-    // transparent + opacity let us see the creek bed through the water.
-    transparent: true,
-    opacity: 0.75,
-  })
-
-  const water = new THREE.Mesh(geometry, material)
-  water.position.y = WATER_LEVEL
-  return water
-}
+// (Step 9: createWater() moved to its own module, src/water.js, and got a shader.)
