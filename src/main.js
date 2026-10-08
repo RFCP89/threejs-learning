@@ -2,6 +2,7 @@
 // Step 1 — Scene, Camera, Renderer, and the Render Loop
 // Step 2 — Lights & Materials (sections 5 and 6)
 // Step 3 — The ground & camera controls (sections 3 and 4)
+// Step 4 — The creek: carved terrain + water (section 4, and src/terrain.js)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -18,6 +19,9 @@ import * as THREE from 'three'
 // "Addons" are official extras that ship with three.js but aren't part of the core,
 // so they're imported one by one from 'three/addons/...'. Curly braces = a named import.
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+// Step 4: our OWN module. './' means "a file next to this one". We import only the
+// names we need; terrain.js decides what it shares with the `export` keyword.
+import { createGround, createWater, getTerrainHeight } from './terrain.js'
 
 // -------------------------------------------------------------
 // 1. The canvas — the HTML element we draw on (see index.html)
@@ -60,7 +64,7 @@ camera.position.set(4, 3, 7)
 // The camera always orbits around and looks at `controls.target`.
 // It needs the camera to move and the canvas to listen for mouse events on.
 const controls = new OrbitControls(camera, canvas)
-controls.target.set(0, 0.3, 0) // look at the rock, slightly above the ground
+controls.target.set(0, 0, -1) // between the rock and the creek behind it
 
 // Damping = inertia: after you let go, the camera glides to a stop instead of halting.
 // Feels much smoother, but REQUIRES controls.update() every frame (see the render loop).
@@ -75,22 +79,16 @@ controls.maxDistance = 20 // can't zoom out past the edge of the world
 controls.maxPolarAngle = Math.PI / 2 - 0.1
 
 // -------------------------------------------------------------
-// 4. The ground
+// 4. The ground & the creek (built in src/terrain.js)
 // -------------------------------------------------------------
-// PlaneGeometry(width, height) is a flat rectangle — 2 triangles. 40×40 metres.
-// It's created STANDING UP, facing the camera (like a wall, in the x/y plane)...
-const groundGeometry = new THREE.PlaneGeometry(40, 40)
-const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0x5c7a3e, // grassy green
-  roughness: 1, // grass doesn't shine
-})
-const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-// ...so we rotate it -90° (−π/2 radians) around the x axis to lay it flat, like a floor.
-// (Rotate +90° instead and it faces DOWN: planes are one-sided, so from above you'd
-//  see nothing. Try it!)
-ground.rotation.x = -Math.PI / 2
-// The ground sits at y = 0. From now on: y = 0 is "the floor", things stand on it.
+// Step 3 had a flat 2-triangle plane here. Step 4 replaces it with a finely divided
+// plane whose vertices are pushed up/down to carve a winding creek — see terrain.js.
+const ground = createGround()
 scene.add(ground)
+
+// A flat sheet of water at WATER_LEVEL: it only shows where the creek dips below it.
+const water = createWater()
+scene.add(water)
 
 // -------------------------------------------------------------
 // 5. The rocks
@@ -119,9 +117,10 @@ const rock = new THREE.Mesh(rockGeometry, rockMaterial)
 // Squash it a little so it looks like a creek pebble rather than a gem.
 rock.scale.set(1.2, 0.7, 1)
 // Step 3: the rock now RESTS on the ground. Its squashed height is about 0.7 below
-// its centre, so lifting the centre to 0.4 leaves it partly sunk into the earth —
-// real rocks are half-buried, never perfectly balanced on top.
-rock.position.y = 0.4
+// its centre, so lifting the centre 0.4 above the ground leaves it partly sunk into
+// the earth — real rocks are half-buried, never perfectly balanced on top.
+// Step 4: the ground isn't flat any more, so we ASK the terrain how high it is here.
+rock.position.y = getTerrainHeight(0, 0) + 0.4
 // A slight tilt so it doesn't look placed by a machine.
 rock.rotation.set(0.1, 0.6, -0.05)
 
@@ -144,7 +143,8 @@ const wetPebbleMaterial = new THREE.MeshStandardMaterial({
 })
 const wetPebble = new THREE.Mesh(wetPebbleGeometry, wetPebbleMaterial)
 wetPebble.scale.set(0.5, 0.3, 0.45) // smaller and flatter
-wetPebble.position.set(1.9, 0.15, 0.6) // to the right of the rock, resting on the ground
+// To the right of the rock, on the slope down to the water — resting on the ground.
+wetPebble.position.set(1.9, getTerrainHeight(1.9, 0.6) + 0.15, 0.6)
 scene.add(wetPebble)
 
 // -------------------------------------------------------------
