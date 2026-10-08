@@ -61,6 +61,9 @@ const vertexShader = /* glsl */ `
     // (-viewPosition.z = how far in front of the camera) makes far fireflies smaller,
     // like real perspective ("size attenuation").
     gl_PointSize = uSize * uPixelRatio / -viewPosition.z;
+    // Step 12: …but cap it. A firefly passing right by the camera would otherwise
+    // become a huge blob filling half the screen.
+    gl_PointSize = min(gl_PointSize, 28.0 * uPixelRatio);
 
     // Blink: a sine wave pushed through pow() spends most of its time near 0 and
     // pops up briefly → short flashes with dim pauses, like real fireflies.
@@ -81,7 +84,9 @@ const fragmentShader = /* glsl */ `
     strength = pow(strength, 2.0); // concentrate the glow in the middle
 
     // gl_FragColor = the colour of this pixel (r, g, b, alpha).
-    gl_FragColor = vec4(uColor * (0.25 + vGlow * 1.5), strength * (0.2 + vGlow));
+    // Step 12: up to ~4.5× the colour at the peak of a flash → above the bloom
+    // threshold, so each flash gets a soft halo.
+    gl_FragColor = vec4(uColor * (0.5 + vGlow * 4.0), strength * (0.2 + vGlow));
   }
 `
 

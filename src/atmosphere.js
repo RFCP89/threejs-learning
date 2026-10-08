@@ -47,6 +47,10 @@ export function createSky(sunDirection) {
   u.sunPosition.value.copy(sunDirection)
   u.cloudCoverage.value = 0.35 // soft, drifting clouds (animated via u.time in main.js)
   u.cloudDensity.value = 0.35
+  // Step 12: hide the sun's disc. Its brightness is thousands of times above the bloom
+  // threshold, so with bloom on it flooded half the screen with glare. The warm glow
+  // AROUND the sun (mie scattering) is part of the sky colour and stays.
+  u.showSunDisc.value = 0
 
   return sky
 }
@@ -69,11 +73,10 @@ export function createEnvironment(renderer, sky) {
   const envScene = new THREE.Scene()
   envScene.add(sky)
 
-  // Hide the sun disc while capturing: a tiny, super-bright dot makes splotchy
-  // reflections. (The tip comes straight from the Sky addon's documentation.)
-  sky.material.uniforms.showSunDisc.value = 0
+  // The sun disc must be hidden while capturing: a tiny, super-bright dot makes
+  // splotchy reflections. (The tip comes straight from the Sky addon's documentation.)
+  // (Since Step 12 the disc is hidden everywhere — see createSky — so nothing to toggle.)
   const envMap = pmrem.fromScene(envScene).texture
-  sky.material.uniforms.showSunDisc.value = 1
 
   pmrem.dispose() // free the generator's GPU memory; we keep only the result
   return envMap

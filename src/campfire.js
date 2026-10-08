@@ -54,7 +54,9 @@ export function createCampfire() {
     const flame = new THREE.Mesh(
       flameGeometry,
       new THREE.MeshBasicMaterial({
-        color,
+        // Step 12: ×3 → HDR-bright (above 1), so the bloom threshold catches the flames.
+        // A Color can hold values above 1; with toneMapped: false they stay that bright.
+        color: new THREE.Color(color).multiplyScalar(3),
         transparent: true,
         opacity: 0.75,
         blending: THREE.AdditiveBlending,

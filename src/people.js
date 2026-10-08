@@ -77,7 +77,7 @@ function material(color) {
 const haloMaterial = new THREE.MeshStandardMaterial({
   color: 0xffd27a,
   emissive: 0xffb84a,
-  emissiveIntensity: 0.8,
+  emissiveIntensity: 3, // Step 12: 0.8 → 3, bright enough for the bloom to make it shine
   roughness: 0.4,
 })
 

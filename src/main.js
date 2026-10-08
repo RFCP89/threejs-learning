@@ -11,6 +11,7 @@
 // Step 9 — Animated water: GLSL injected into a standard material (src/water.js)
 // Step 10 — Life: idle motion, a flickering campfire, fireflies (section 5c)
 // Step 11 — Interaction: hover & click people, raycasting (section 8b, src/interaction.js)
+// Step 12 — Polish: bloom post-processing, FPS stats, ?debug mode (sections 7c, 9)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -37,10 +38,19 @@ import { createEnvironment, createFog, createSky, getSunDirection } from './atmo
 import { createCampfire } from './campfire.js'
 import { createFireflies } from './fireflies.js'
 import { createInteraction } from './interaction.js'
+// Step 12: post-processing addons (bloom) and a tiny FPS meter.
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import Stats from 'three/addons/libs/stats.module.js'
 
-// Debug visuals (helpers, console logs). Set to false to hide them all.
+// Debug visuals (helpers, FPS meter, console logs).
 // (Step 6: moved up here from the lights section, since several sections now use it.)
-const DEBUG = true
+// Step 12: no longer hard-coded. The finished scene is clean by default; add ?debug to
+// the address to turn the helpers on:  http://localhost:5180/?debug
+// URLSearchParams reads the "?key=value&…" part of the address.
+const DEBUG = new URLSearchParams(window.location.search).has('debug')
 
 // -------------------------------------------------------------
 // 1. The canvas — the HTML element we draw on (see index.html)
@@ -333,6 +343,50 @@ sky.castShadow = false
 sky.receiveShadow = false
 
 // -------------------------------------------------------------
+// 7c. Post-processing (Step 12): bloom
+// -------------------------------------------------------------
+// Until now, renderer.render() drew the scene straight to the screen. POST-PROCESSING
+// draws it into an off-screen image first (a "render target"), then runs full-screen
+// effects over that image — like filters in a photo app — before showing it.
+//
+// EffectComposer manages that chain of "passes":
+//   1. RenderPass       — render the scene into the image (in HDR: values can be > 1)
+//   2. UnrealBloomPass  — find everything brighter than a THRESHOLD, blur it, add it back
+//                         → bright things glow and bleed light, like in a camera lens
+//   3. OutputPass       — apply tone mapping (Step 8) + convert colours for the screen.
+//                         With a composer, tone mapping happens HERE, at the very end.
+//
+// Anti-aliasing: the canvas's own `antialias` only works when drawing straight to the
+// screen. Our render target needs its own: `samples: 4` = 4× MSAA. And HalfFloatType
+// stores colours as floating point, so values above 1 survive until the bloom sees them.
+const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+  type: THREE.HalfFloatType,
+  samples: 4,
+})
+const composer = new EffectComposer(renderer, renderTarget)
+composer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+composer.setSize(window.innerWidth, window.innerHeight)
+
+composer.addPass(new RenderPass(scene, camera))
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.4, // strength — how much glow is added
+  0.4, // radius — how far the glow spreads
+  1.6, // threshold — only pixels brighter than this glow. The fire, halo and fireflies
+  //       are made "HDR-bright" (2–4.5) in their own files on purpose. At 1.0, sunlit
+  //       leaves and fire-lit robes glowed too — everything looked smeared. At 1.6 only
+  //       the true light sources pass.
+)
+composer.addPass(bloomPass)
+composer.addPass(new OutputPass())
+
+// FPS meter (frames per second) in the top-left corner — debug mode only.
+// 60 = smooth on most screens. Click it to cycle: FPS / ms per frame / memory.
+const stats = DEBUG ? new Stats() : null
+if (stats) document.body.appendChild(stats.dom)
+
+// -------------------------------------------------------------
 // 8. Handle window resizing
 // -------------------------------------------------------------
 // Without this, resizing the browser stretches/squashes the picture.
@@ -342,6 +396,9 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  // Step 12: the composer (and its bloom) has its own images to resize too.
+  composer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  composer.setSize(window.innerWidth, window.innerHeight)
 })
 
 // -------------------------------------------------------------
@@ -362,6 +419,8 @@ const interaction = createInteraction({ camera, canvas, controls, people: gather
 // YOU who moves (the camera). The time-based animation from Step 1 will come back
 // for things that really move: water, people breathing, fireflies.
 let drawCallsLogged = false
+// renderer.info.autoReset = false: see the reset() call inside the loop (Step 12).
+renderer.info.autoReset = false
 renderer.setAnimationLoop((time) => {
   const seconds = time / 1000
 
@@ -390,7 +449,12 @@ renderer.setAnimationLoop((time) => {
   interaction.update()
 
   // Paint one picture of the scene, as seen by the camera.
-  renderer.render(scene, camera)
+  // Step 12: through the composer (scene → bloom → tone mapping) instead of directly.
+  // renderer.info normally resets on every render() call; the composer makes several
+  // per frame, so we reset it ourselves to count the WHOLE frame.
+  renderer.info.reset()
+  composer.render()
+  stats?.update() // ?. = "only if stats exists" (it's null outside debug mode)
 
   // Step 5: renderer.info counts what the last frame cost. Logged once (DevTools →
   // Console). ~190 rocks and trees, yet only a handful of draw calls — instancing!

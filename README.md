@@ -13,6 +13,18 @@ docker compose down      # stop and remove the container
 Node and npm live **inside** the container, so nothing needs to be installed on your machine
 except Docker. Edits to your files reload the page instantly. See [`notes/docker.md`](notes/docker.md).
 
+Add **`?debug`** to the address (http://localhost:5180/?debug) to show the helpers:
+axes, FPS meter, draw-call count in the console.
+
+## Build & publish
+
+```bash
+docker compose exec web npm run build   # → dist/ : the finished static site
+```
+
+Pushing to `main` runs `.github/workflows/deploy.yml`, which builds the site and publishes it
+with GitHub Pages (enable once: repo **Settings → Pages → Source: GitHub Actions**).
+
 ## Run it (without Docker)
 
 ```bash
@@ -48,4 +60,4 @@ git show <commit>          # see exactly what changed in a step
 | 9 | Animating water with a shader | ✅ |
 | 10 | Life: idle animations, fireflies (particles), a campfire | ✅ |
 | 11 | Interaction: click a figure to see their name (raycasting) | ✅ |
-| 12 | Polish: post-processing (bloom), performance, deploy | |
+| 12 | Polish: post-processing (bloom), performance, deploy | ✅ |

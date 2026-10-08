@@ -116,6 +116,12 @@ export function createWater() {
       // normal_fragment_maps is where three.js applies normal maps — the perfect spot
       // to override the normal with our waves.
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + fragmentMain)
+      // Step 12: cap the brightness. The low sun reflecting on smooth water produces
+      // HUGE values (far above 1). Before bloom, tone mapping just turned them white;
+      // with bloom they flooded half the screen with glare. opaque_fragment is where
+      // the final colour (gl_FragColor) is written — right after it, we clamp it:
+      // the glints still sparkle and glow, just not blindingly.
+      .replace('#include <opaque_fragment>', '#include <opaque_fragment>\n' + 'gl_FragColor.rgb = min(gl_FragColor.rgb, vec3(2.5));')
   }
 
   const water = new THREE.Mesh(geometry, material)
