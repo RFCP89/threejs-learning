@@ -1,5 +1,6 @@
 // =============================================================
 // Step 1 — Scene, Camera, Renderer, and the Render Loop
+// Step 2 — Lights & Materials (sections 4 and 5)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -57,11 +58,19 @@ camera.lookAt(0, 0, 0)
 // which already looks a lot like a stylised stone.
 const rockGeometry = new THREE.IcosahedronGeometry(1, 0)
 
-// Material: MeshNormalMaterial colours each face by the direction it points.
-// It's a debugging material that needs NO lights — perfect for a first step,
-// because without lights most materials render pitch black. (Lights = Step 2.)
-// flatShading makes each triangle a single flat colour → crisp facets.
-const rockMaterial = new THREE.MeshNormalMaterial({ flatShading: true })
+// Material (Step 2): MeshStandardMaterial is three.js's "physically based" (PBR)
+// material — it reacts to light the way real surfaces do. It is described by:
+//   color     — the base colour of the surface (in light, not in shadow)
+//   roughness — 0 = mirror-smooth (sharp shiny highlight), 1 = chalky/matte (no shine)
+//   metalness — 0 = non-metal (stone, wood, skin, cloth), 1 = metal. Stone is 0.
+// Unlike Step 1's MeshNormalMaterial, it is BLACK without lights (see section 5).
+// flatShading makes each triangle a single flat tone → crisp low-poly facets.
+const rockMaterial = new THREE.MeshStandardMaterial({
+  color: 0x8f8778, // warm grey stone
+  roughness: 0.9, // dry stone: almost no shine
+  metalness: 0,
+  flatShading: true,
+})
 
 const rock = new THREE.Mesh(rockGeometry, rockMaterial)
 // Squash it a little so it looks like a creek pebble rather than a gem.
@@ -70,8 +79,58 @@ rock.scale.set(1.2, 0.7, 1)
 // Nothing is visible until it's added to the scene.
 scene.add(rock)
 
+// A second, smaller pebble — this one wet and worn SMOOTH by the creek.
+// Two differences from the rock, each teaching something:
+//  1. LOW roughness (0.2) + darker colour → a shiny highlight, like wet stone.
+//  2. SMOOTH shading: more triangles (detail 2 = 320 faces instead of 20) and no
+//     flatShading. three.js then blends the lighting across faces, so the surface
+//     looks rounded and the highlight shows up as a soft bright spot.
+//     (With flat facets, the highlight only appears if one facet happens to sit at
+//     exactly the right angle between sun and camera — usually none does.)
+const wetPebbleGeometry = new THREE.IcosahedronGeometry(1, 2)
+const wetPebbleMaterial = new THREE.MeshStandardMaterial({
+  color: 0x4f4a42,
+  roughness: 0.2,
+  metalness: 0,
+})
+const wetPebble = new THREE.Mesh(wetPebbleGeometry, wetPebbleMaterial)
+wetPebble.scale.set(0.5, 0.3, 0.45) // smaller and flatter
+wetPebble.position.set(1.9, -0.35, 0.6) // to the right, a bit lower and closer to us
+scene.add(wetPebble)
+
 // -------------------------------------------------------------
-// 5. The renderer
+// 5. Lights — golden hour by the creek
+// -------------------------------------------------------------
+// Real scenes are lit by a mix of DIRECT light (the sun: one direction, makes clear
+// bright and dark sides) and INDIRECT light (light bounced around by sky and ground,
+// which keeps shadows from being pitch black). We fake both with two lights:
+
+// HemisphereLight = soft light from everywhere: one colour from above (the sky),
+// another from below (light bouncing off the ground), blending in between.
+// It has no position that matters — it lights every surface by which way it faces.
+const skyLight = new THREE.HemisphereLight(
+  0xffe2b8, // sky colour: warm evening haze
+  0x2f4a3a, // ground colour: green, bounced off grass
+  1.0, // intensity
+)
+scene.add(skyLight)
+
+// DirectionalLight = the sun. Its rays are parallel (the sun is very far away), so only
+// the DIRECTION matters: it shines from `position` towards `target` (default: 0,0,0).
+// Low on the horizon + orange = golden hour.
+const sun = new THREE.DirectionalLight(0xffb36b, 3.0)
+sun.position.set(4, 2.5, 3) // right, slightly up, in front → light from the front-right
+scene.add(sun)
+
+// Helpers are debug visuals: this draws a small square + line showing where the sun is
+// and which way it points. Set DEBUG to false to hide it.
+const DEBUG = true
+if (DEBUG) {
+  scene.add(new THREE.DirectionalLightHelper(sun, 0.5))
+}
+
+// -------------------------------------------------------------
+// 6. The renderer
 // -------------------------------------------------------------
 // WebGLRenderer draws with the GPU onto our canvas.
 // antialias smooths the jagged edges of triangles.
@@ -82,7 +141,7 @@ renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 // -------------------------------------------------------------
-// 6. Handle window resizing
+// 7. Handle window resizing
 // -------------------------------------------------------------
 // Without this, resizing the browser stretches/squashes the picture.
 window.addEventListener('resize', () => {
@@ -94,7 +153,7 @@ window.addEventListener('resize', () => {
 })
 
 // -------------------------------------------------------------
-// 7. The render loop
+// 8. The render loop
 // -------------------------------------------------------------
 // setAnimationLoop calls our function once per screen refresh (usually 60×/s).
 // It passes `time`: milliseconds since the page started.

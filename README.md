@@ -38,7 +38,7 @@ git show <commit>          # see exactly what changed in a step
 | 0 | Project setup: Vite, npm, files | ✅ |
 | 0.5 | Docker: run the dev server in a container | ✅ |
 | 1 | Scene, camera, renderer, the render loop — a spinning rock | ✅ |
-| 2 | Lights & materials — the rock gets real shading | |
+| 2 | Lights & materials — the rock gets real shading | ✅ |
 | 3 | The ground & camera controls (OrbitControls) | |
 | 4 | Building the creek: water plane, banks | |
 | 5 | Nature: rocks & trees with instancing | |
