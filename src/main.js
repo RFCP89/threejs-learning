@@ -1,6 +1,7 @@
 // =============================================================
 // Step 1 — Scene, Camera, Renderer, and the Render Loop
-// Step 2 — Lights & Materials (sections 4 and 5)
+// Step 2 — Lights & Materials (sections 5 and 6)
+// Step 3 — The ground & camera controls (sections 3 and 4)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -14,6 +15,9 @@
 // Import the whole library under the name THREE.
 // Vite resolves 'three' to node_modules/three for us.
 import * as THREE from 'three'
+// "Addons" are official extras that ship with three.js but aren't part of the core,
+// so they're imported one by one from 'three/addons/...'. Curly braces = a named import.
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 // -------------------------------------------------------------
 // 1. The canvas — the HTML element we draw on (see index.html)
@@ -25,10 +29,12 @@ const canvas = document.querySelector('#scene')
 // -------------------------------------------------------------
 const scene = new THREE.Scene()
 // A background colour for the world. Hex colours work like in CSS: 0xRRGGBB.
-scene.background = new THREE.Color(0x0b1a14) // deep forest green
+// Step 3: now that there's a ground and a horizon, a warm evening-sky colour
+// reads much better than the dark green we had. (A real sky comes in Step 8.)
+scene.background = new THREE.Color(0xe8c9a0)
 
 // -------------------------------------------------------------
-// 3. The camera
+// 3. The camera + controls
 // -------------------------------------------------------------
 // PerspectiveCamera mimics a real eye/lens: far things look smaller.
 // Its 4 arguments:
@@ -44,13 +50,50 @@ const camera = new THREE.PerspectiveCamera(
 )
 // Coordinates in three.js: x = right, y = up, z = towards you (out of the screen).
 // The camera starts at (0,0,0) — the same spot as our object, so we'd see nothing.
-// Move it back (z) and a little up (y):
-camera.position.set(0, 1, 5)
-// Point the camera at the centre of the world.
-camera.lookAt(0, 0, 0)
+// Move it back (z), up (y) and a bit to the right (x) for a 3/4 view of the ground:
+camera.position.set(4, 3, 7)
+
+// OrbitControls (Step 3) let you move the camera with the mouse / touch:
+//   left-drag  → orbit (circle around a point)
+//   scroll     → zoom (dolly in/out)
+//   right-drag → pan (slide sideways)
+// The camera always orbits around and looks at `controls.target`.
+// It needs the camera to move and the canvas to listen for mouse events on.
+const controls = new OrbitControls(camera, canvas)
+controls.target.set(0, 0.3, 0) // look at the rock, slightly above the ground
+
+// Damping = inertia: after you let go, the camera glides to a stop instead of halting.
+// Feels much smoother, but REQUIRES controls.update() every frame (see the render loop).
+controls.enableDamping = true
+controls.dampingFactor = 0.05
+
+// Limits, so the visitor can't get lost:
+controls.minDistance = 2 // can't zoom into the rock
+controls.maxDistance = 20 // can't zoom out past the edge of the world
+// Polar angle = how far the camera tilts from straight-up (0) to straight-down (π).
+// π/2 is level with the horizon; stopping a little before it keeps us above ground.
+controls.maxPolarAngle = Math.PI / 2 - 0.1
 
 // -------------------------------------------------------------
-// 4. An object — our first rock
+// 4. The ground
+// -------------------------------------------------------------
+// PlaneGeometry(width, height) is a flat rectangle — 2 triangles. 40×40 metres.
+// It's created STANDING UP, facing the camera (like a wall, in the x/y plane)...
+const groundGeometry = new THREE.PlaneGeometry(40, 40)
+const groundMaterial = new THREE.MeshStandardMaterial({
+  color: 0x5c7a3e, // grassy green
+  roughness: 1, // grass doesn't shine
+})
+const ground = new THREE.Mesh(groundGeometry, groundMaterial)
+// ...so we rotate it -90° (−π/2 radians) around the x axis to lay it flat, like a floor.
+// (Rotate +90° instead and it faces DOWN: planes are one-sided, so from above you'd
+//  see nothing. Try it!)
+ground.rotation.x = -Math.PI / 2
+// The ground sits at y = 0. From now on: y = 0 is "the floor", things stand on it.
+scene.add(ground)
+
+// -------------------------------------------------------------
+// 5. The rocks
 // -------------------------------------------------------------
 // A visible object is a MESH = GEOMETRY (the shape) + MATERIAL (the surface).
 
@@ -75,6 +118,12 @@ const rockMaterial = new THREE.MeshStandardMaterial({
 const rock = new THREE.Mesh(rockGeometry, rockMaterial)
 // Squash it a little so it looks like a creek pebble rather than a gem.
 rock.scale.set(1.2, 0.7, 1)
+// Step 3: the rock now RESTS on the ground. Its squashed height is about 0.7 below
+// its centre, so lifting the centre to 0.4 leaves it partly sunk into the earth —
+// real rocks are half-buried, never perfectly balanced on top.
+rock.position.y = 0.4
+// A slight tilt so it doesn't look placed by a machine.
+rock.rotation.set(0.1, 0.6, -0.05)
 
 // Nothing is visible until it's added to the scene.
 scene.add(rock)
@@ -95,11 +144,11 @@ const wetPebbleMaterial = new THREE.MeshStandardMaterial({
 })
 const wetPebble = new THREE.Mesh(wetPebbleGeometry, wetPebbleMaterial)
 wetPebble.scale.set(0.5, 0.3, 0.45) // smaller and flatter
-wetPebble.position.set(1.9, -0.35, 0.6) // to the right, a bit lower and closer to us
+wetPebble.position.set(1.9, 0.15, 0.6) // to the right of the rock, resting on the ground
 scene.add(wetPebble)
 
 // -------------------------------------------------------------
-// 5. Lights — golden hour by the creek
+// 6. Lights — golden hour by the creek
 // -------------------------------------------------------------
 // Real scenes are lit by a mix of DIRECT light (the sun: one direction, makes clear
 // bright and dark sides) and INDIRECT light (light bounced around by sky and ground,
@@ -122,15 +171,22 @@ const sun = new THREE.DirectionalLight(0xffb36b, 3.0)
 sun.position.set(4, 2.5, 3) // right, slightly up, in front → light from the front-right
 scene.add(sun)
 
-// Helpers are debug visuals: this draws a small square + line showing where the sun is
-// and which way it points. Set DEBUG to false to hide it.
+// Helpers are debug visuals. Set DEBUG to false to hide them all.
 const DEBUG = true
 if (DEBUG) {
+  // A small square + line showing where the sun is and which way it points.
   scene.add(new THREE.DirectionalLightHelper(sun, 0.5))
+  // Step 3: AxesHelper draws the 3 axes from the origin (0,0,0), 2 metres long:
+  //   RED = x (right)   GREEN = y (up)   BLUE = z (towards the starting camera)
+  // Orbit around and watch them — it's the best way to build a feel for 3D space.
+  // (Lifted 1 cm so the ground doesn't hide the red & blue lines lying on it.)
+  const axes = new THREE.AxesHelper(2)
+  axes.position.y = 0.01
+  scene.add(axes)
 }
 
 // -------------------------------------------------------------
-// 6. The renderer
+// 7. The renderer
 // -------------------------------------------------------------
 // WebGLRenderer draws with the GPU onto our canvas.
 // antialias smooths the jagged edges of triangles.
@@ -141,7 +197,7 @@ renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 // -------------------------------------------------------------
-// 7. Handle window resizing
+// 8. Handle window resizing
 // -------------------------------------------------------------
 // Without this, resizing the browser stretches/squashes the picture.
 window.addEventListener('resize', () => {
@@ -153,19 +209,17 @@ window.addEventListener('resize', () => {
 })
 
 // -------------------------------------------------------------
-// 8. The render loop
+// 9. The render loop
 // -------------------------------------------------------------
 // setAnimationLoop calls our function once per screen refresh (usually 60×/s).
-// It passes `time`: milliseconds since the page started.
-renderer.setAnimationLoop((time) => {
-  const seconds = time / 1000
-
-  // Rotation is in RADIANS (a full turn = 2π ≈ 6.28).
-  // Basing rotation on elapsed time (not "+0.01 per frame") means it spins at the
-  // same speed on a 60 Hz and a 144 Hz monitor.
-  rock.rotation.y = seconds * 0.5 // half a radian per second
-  // A gentle bob up and down. Math.sin swings smoothly between -1 and 1.
-  rock.position.y = Math.sin(seconds * 1.5) * 0.15
+// It passes `time` (milliseconds since the page started) — unused this step.
+//
+// Step 3: the rock no longer spins or bobs — it rests on the ground, and now it's
+// YOU who moves (the camera). The time-based animation from Step 1 will come back
+// for things that really move: water, people breathing, fireflies.
+renderer.setAnimationLoop(() => {
+  // Apply damping: nudges the camera a little further along its glide each frame.
+  controls.update()
 
   // Paint one picture of the scene, as seen by the camera.
   renderer.render(scene, camera)
