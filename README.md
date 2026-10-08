@@ -3,7 +3,17 @@
 A peaceful 3D scene of a creek at golden hour, with Jesus and the twelve disciples
 resting along its banks. Built one small step at a time to learn three.js.
 
-## Run it
+## Run it (Docker — recommended)
+
+```bash
+docker compose up        # build (first time) + start → open http://localhost:5180
+docker compose down      # stop and remove the container
+```
+
+Node and npm live **inside** the container, so nothing needs to be installed on your machine
+except Docker. Edits to your files reload the page instantly. See [`notes/docker.md`](notes/docker.md).
+
+## Run it (without Docker)
 
 ```bash
 npm install     # once, downloads three.js and vite into node_modules/
@@ -26,6 +36,7 @@ git show <commit>          # see exactly what changed in a step
 | Step | Topic | Status |
 |---|---|---|
 | 0 | Project setup: Vite, npm, files | ✅ |
+| 0.5 | Docker: run the dev server in a container | ✅ |
 | 1 | Scene, camera, renderer, the render loop — a spinning rock | ✅ |
 | 2 | Lights & materials — the rock gets real shading | |
 | 3 | The ground & camera controls (OrbitControls) | |

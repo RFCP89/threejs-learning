@@ -1,0 +1,22 @@
+# Docker Compose describes the containers of a project and how to run them.
+# Start everything with:  docker compose up
+services:
+  web:
+    # Build the image from the Dockerfile in this folder.
+    build: .
+    # "host port : container port". Inside the container Vite always uses 5173;
+    # on your machine we use 5180 (5173 is taken by another project's container).
+    # Open http://localhost:5180 → Docker forwards it to 5173 in the container.
+    ports:
+      - "5180:5173"
+    volumes:
+      # Bind mount: your project folder appears live inside the container at /app.
+      # Edit files in your editor → Vite in the container sees the change → page reloads.
+      - .:/app
+      # …except node_modules: keep the container's own copy (installed by `npm ci`
+      # in the image) in a separate volume, so the bind mount doesn't hide it.
+      - node_modules:/app/node_modules
+
+# Named volumes managed by Docker.
+volumes:
+  node_modules:

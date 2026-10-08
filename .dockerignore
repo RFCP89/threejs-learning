@@ -1,0 +1,5 @@
+# Files NOT sent to Docker when building the image (like .gitignore, but for Docker).
+# node_modules is reinstalled inside the image (built for Linux/Alpine), so never copy yours.
+node_modules
+dist
+.git
