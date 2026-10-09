@@ -24,8 +24,14 @@ export const SUN = { elevation: 5, azimuth: 225 }
 // Turn those two angles into a direction vector (x, y, z) of length 1.
 // Spherical coordinates: radius 1, phi = angle DOWN from straight up, theta = around.
 export function getSunDirection() {
-  const phi = THREE.MathUtils.degToRad(90 - SUN.elevation)
-  const theta = THREE.MathUtils.degToRad(SUN.azimuth)
+  return directionFromAngles(SUN.elevation, SUN.azimuth)
+}
+
+// The same maths for ANY pair of angles. The time-of-day switch (src/timeOfDay.js) uses
+// it to move the sun — and the moon — around the sky.
+export function directionFromAngles(elevation, azimuth) {
+  const phi = THREE.MathUtils.degToRad(90 - elevation)
+  const theta = THREE.MathUtils.degToRad(azimuth)
   return new THREE.Vector3().setFromSphericalCoords(1, phi, theta)
 }
 
@@ -71,12 +77,19 @@ export function createSky(sunDirection) {
   // the scene went twice as dark. So the limit has an on/off uniform (1 = on), which
   // createEnvironment switches off while it captures.
   sky.userData.softLimit = { value: 1 }
+  // Time of day (src/timeOfDay.js): once the sun is below the horizon, the physical sky
+  // model goes almost pitch black — real night skies still have a faint blue glow
+  // (moonlight, starlight, city light far away). This colour is simply ADDED to the
+  // sky everywhere. Black (0, 0, 0) = no change, which is what day and sunset use.
+  sky.userData.nightGlow = { value: new THREE.Color(0x000000) }
   sky.material.onBeforeCompile = (shader) => {
     shader.uniforms.uSoftLimit = sky.userData.softLimit
-    shader.fragmentShader = 'uniform float uSoftLimit;\n' + shader.fragmentShader
+    shader.uniforms.uNightGlow = sky.userData.nightGlow
+    shader.fragmentShader = 'uniform float uSoftLimit;\nuniform vec3 uNightGlow;\n' + shader.fragmentShader
     shader.fragmentShader = shader.fragmentShader.replace(
       'gl_FragColor = vec4( texColor, 1.0 );',
       /* glsl */ `
+        texColor += uNightGlow;
         const float KNEE = 0.8;
         const float LIMIT = 1.4;
         float peak = max(texColor.r, max(texColor.g, texColor.b)); // brightest channel
@@ -105,12 +118,19 @@ export function createSky(sunDirection) {
 //
 // PMREMGenerator renders a scene in all 6 directions and pre-blurs the result at
 // several levels, so rough materials get blurry reflections and smooth ones sharp.
+//
+// Time of day: when the sky changes, the light it gives must change too, so this runs
+// again on every switch (src/timeOfDay.js). That's why it returns the whole RENDER
+// TARGET (the GPU image) and not just its texture: the caller uses `.texture`, and
+// calls `.dispose()` on the old one to free its GPU memory when a new one replaces it.
 export function createEnvironment(renderer, sky) {
   const pmrem = new THREE.PMREMGenerator(renderer)
 
   // Render ONLY the sky (not the ground, people…) into the environment map.
   // An object can only have ONE parent, so adding the sky to this temporary scene
-  // takes it out of wherever it was. main.js adds it back to the real scene after.
+  // takes it out of wherever it was — we remember where, and put it back after.
+  // (The first time, the sky isn't in any scene yet; main.js adds it.)
+  const parent = sky.parent
   const envScene = new THREE.Scene()
   envScene.add(sky)
 
@@ -120,9 +140,10 @@ export function createEnvironment(renderer, sky) {
   // The soft brightness limit IS toggled: off while capturing (full-strength light for
   // the scene), back on afterwards (comfortable sky for the eye).
   sky.userData.softLimit.value = 0
-  const envMap = pmrem.fromScene(envScene).texture
+  const envMap = pmrem.fromScene(envScene)
   sky.userData.softLimit.value = 1
 
+  parent?.add(sky) // ?. = only if it had a parent
   pmrem.dispose() // free the generator's GPU memory; we keep only the result
   return envMap
 }

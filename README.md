@@ -16,6 +16,9 @@ except Docker. Edits to your files reload the page instantly. See [`notes/docker
 Add **`?debug`** to the address (http://localhost:5180/?debug) to show the helpers:
 axes, FPS meter, draw-call count in the console.
 
+Add **`?time=day`** or **`?time=night`** to open on another time of day (or use the
+buttons in the bottom-left corner).
+
 ## Build & publish
 
 ```bash
@@ -61,3 +64,4 @@ git show <commit>          # see exactly what changed in a step
 | 10 | Life: idle animations, fireflies (particles), a campfire | ✅ |
 | 11 | Interaction: click a figure to see their name (raycasting) | ✅ |
 | 12 | Polish: post-processing (bloom), performance, deploy | ✅ |
+| 13 | Time of day: Day / Sunset / Night buttons, blending presets | ✅ |

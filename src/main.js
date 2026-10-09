@@ -12,6 +12,7 @@
 // Step 10 — Life: idle motion, a flickering campfire, fireflies (section 5c)
 // Step 11 — Interaction: hover & click people, raycasting (section 8b, src/interaction.js)
 // Step 12 — Polish: bloom post-processing, FPS stats, ?debug mode (sections 7c, 9)
+// Extra  — Time of day: Day / Sunset / Night buttons (section 8c, src/timeOfDay.js)
 // =============================================================
 // Every three.js app is built from the same three pieces:
 //
@@ -34,11 +35,12 @@ import { createGround, getTerrainHeight } from './terrain.js'
 import { createWater, updateWater } from './water.js'
 import { CLEARING, createRocks, createTrees } from './nature.js'
 import { createGathering } from './disciples.js'
-import { createEnvironment, createFog, createSky, getSunDirection } from './atmosphere.js'
+import { createFog, createSky, getSunDirection } from './atmosphere.js'
 import { createCampfire } from './campfire.js'
 import { createFireflies } from './fireflies.js'
 import { createInteraction } from './interaction.js'
 import { createClouds } from './clouds.js'
+import { createTimeOfDay, TIMES } from './timeOfDay.js'
 // Step 12: post-processing addons (bloom) and a tiny FPS meter.
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -318,15 +320,12 @@ renderer.shadowMap.type = THREE.PCFShadowMap
 // 7b. Sky & environment (Step 8) — built in src/atmosphere.js
 // -------------------------------------------------------------
 const sky = createSky(sunDirection)
-// The environment map needs the renderer (it RENDERS the sky in 6 directions), so this
-// has to come after section 7.
-// scene.environment = the default environment for every MeshStandardMaterial.
-scene.environment = createEnvironment(renderer, sky)
-// How strongly that sky-light counts. At 1 the bright sky floods everything and the
-// sun's direction gets lost; lower keeps it a soft fill, so the sun stays the star.
-scene.environmentIntensity = 0.6
-// createEnvironment borrowed the sky for its temporary scene; adding it here moves it
-// into the real scene (an object can only have one parent).
+// The environment map: scene.environment = the default environment for every
+// MeshStandardMaterial. It needs the renderer (it RENDERS the sky in 6 directions).
+// Since the time-of-day switch, it's captured in src/timeOfDay.js (section 8c) — every
+// time the sky changes — together with scene.environmentIntensity: how strongly that
+// sky-light counts. At 1 the bright sky floods everything and the sun's direction gets
+// lost; lower keeps it a soft fill, so the sun stays the star.
 scene.add(sky)
 
 // Shadow flags for every mesh. scene.traverse() visits EVERY object in the scene graph
@@ -416,6 +415,41 @@ window.addEventListener('resize', () => {
 const interaction = createInteraction({ camera, canvas, controls, people: gathering.group })
 
 // -------------------------------------------------------------
+// 8c. Time of day — src/timeOfDay.js
+// -------------------------------------------------------------
+// The lights, sky, fog and clouds above were built for sunset (Step 8). From here on,
+// timeOfDay.js owns their values and blends them between three presets.
+// Start with ?time=day or ?time=night in the address to open on another time (default:
+// sunset), e.g. http://localhost:5180/?time=night
+const requestedTime = new URLSearchParams(window.location.search).get('time')
+const startTime = requestedTime in TIMES ? requestedTime : 'sunset'
+const timeOfDay = createTimeOfDay({
+  renderer,
+  scene,
+  sky,
+  sun,
+  hemiLight: skyLight,
+  clouds,
+  fireflies,
+  initial: startTime,
+})
+
+// The buttons live in index.html. Each one has data-time="day" etc.: a data-* attribute
+// is a place to store our own info on an HTML element; JS reads it as button.dataset.time.
+// aria-pressed tells screen readers (and our CSS) which button is the active one.
+const timeButtons = document.querySelectorAll('.time-of-day button')
+function showActiveButton(name) {
+  timeButtons.forEach((button) => button.setAttribute('aria-pressed', button.dataset.time === name))
+}
+timeButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    timeOfDay.set(button.dataset.time)
+    showActiveButton(button.dataset.time)
+  })
+})
+showActiveButton(startTime)
+
+// -------------------------------------------------------------
 // 9. The render loop
 // -------------------------------------------------------------
 // setAnimationLoop calls our function once per screen refresh (usually 60×/s).
@@ -427,8 +461,13 @@ const interaction = createInteraction({ camera, canvas, controls, people: gather
 let drawCallsLogged = false
 // renderer.info.autoReset = false: see the reset() call inside the loop (Step 12).
 renderer.info.autoReset = false
+let previousSeconds = 0
 renderer.setAnimationLoop((time) => {
   const seconds = time / 1000
+  // Time since the last frame. Most animations here use the total time, but a blend
+  // that runs "for 2.5 seconds" needs to know how much time each frame adds.
+  const delta = seconds - previousSeconds
+  previousSeconds = seconds
 
   // Apply damping: nudges the camera a little further along its glide each frame.
   controls.update()
@@ -452,6 +491,7 @@ renderer.setAnimationLoop((time) => {
   campfire.update(seconds)
   fireflies.update(seconds)
   clouds.update(seconds)
+  timeOfDay.update(delta)
   // Step 11: smooth camera focus + keep the label glued to the selected head.
   interaction.update()
 

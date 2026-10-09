@@ -74,3 +74,45 @@ body {
   max-width: calc(100% - 32px);
   pointer-events: none;
 }
+
+/* ----- Time of day: three buttons in the bottom-left corner ----- */
+.time-of-day {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(30, 22, 14, 0.55); /* same glass as the hint */
+}
+.time-of-day button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fbeedd;
+  font: 13px Georgia, serif;
+  cursor: pointer;
+}
+.time-of-day button:hover {
+  background: rgba(251, 238, 221, 0.15);
+}
+/* The active one: golden, like the selected person's label. */
+.time-of-day button[aria-pressed='true'] {
+  background: #ffd27a;
+  color: #1e160e;
+}
+/* A clear outline when moving with the keyboard (Tab), but not on mouse clicks. */
+.time-of-day button:focus-visible {
+  outline: 2px solid #ffd27a;
+  outline-offset: 2px;
+}
+
+/* Narrow screens: the hint (bottom-centre) would sit on top of the buttons,
+   so lift the hint above them. */
+@media (max-width: 900px) {
+  .hint {
+    bottom: 64px;
+  }
+}
