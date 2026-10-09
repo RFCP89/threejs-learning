@@ -74,6 +74,7 @@ const vertexShader = /* glsl */ `
 
 const fragmentShader = /* glsl */ `
   uniform vec3 uColor;
+  uniform float uFade; // time of day: 0 = hidden (bright daylight) … 1 = fully glowing
   varying float vGlow;
 
   void main() {
@@ -86,7 +87,7 @@ const fragmentShader = /* glsl */ `
     // gl_FragColor = the colour of this pixel (r, g, b, alpha).
     // Step 12: up to ~4.5× the colour at the peak of a flash → above the bloom
     // threshold, so each flash gets a soft halo.
-    gl_FragColor = vec4(uColor * (0.5 + vGlow * 4.0), strength * (0.2 + vGlow));
+    gl_FragColor = vec4(uColor * (0.5 + vGlow * 4.0), strength * (0.2 + vGlow) * uFade);
   }
 `
 
@@ -125,6 +126,7 @@ export function createFireflies(center, count = 90) {
       uSize: { value: 140 }, // base size in pixels at 1 m away (shrinks with distance)
       uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
       uColor: { value: new THREE.Color(0xd9ff7a) }, // firefly yellow-green
+      uFade: { value: 1 }, // set by src/timeOfDay.js — fireflies don't glow at noon
     },
     transparent: true,
     blending: THREE.AdditiveBlending, // glows add up, like the flames
@@ -142,5 +144,11 @@ export function createFireflies(center, count = 90) {
     material.uniforms.uTime.value = seconds
   }
 
-  return { points: fireflies, update }
+  // Time of day: 0 = invisible … 1 = full glow (src/timeOfDay.js fades it).
+  function setFade(value) {
+    material.uniforms.uFade.value = value
+    fireflies.visible = value > 0 // fully faded → skip drawing them at all
+  }
+
+  return { points: fireflies, update, setFade }
 }

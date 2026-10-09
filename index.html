@@ -26,6 +26,14 @@
     </div>
     <p class="hint">Drag to look around · scroll to zoom · click someone to meet them</p>
 
+    <!-- Time of day: real <button> elements, so they work with the keyboard (Tab, Enter)
+         and screen readers for free. main.js listens for their clicks. -->
+    <div class="time-of-day" role="group" aria-label="Time of day">
+      <button type="button" data-time="day">Day</button>
+      <button type="button" data-time="sunset">Sunset</button>
+      <button type="button" data-time="night">Night</button>
+    </div>
+
     <!--
       type="module" means we can use `import` in our JS.
       Vite intercepts this file and resolves imports like `import * as THREE from 'three'`.
